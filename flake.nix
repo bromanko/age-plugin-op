@@ -1,7 +1,7 @@
 {
   description = "An age plugin using 1Password for encryption keys";
 
-  inputs = { nixpkgs.url = "nixpkgs/nixos-21.11"; };
+  inputs = { nixpkgs.url = "nixpkgs/nixpkgs-unstable"; };
 
   outputs = { self, nixpkgs }:
     let

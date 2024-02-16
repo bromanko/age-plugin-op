@@ -26,7 +26,7 @@
             inherit version;
             src = ./.;
             vendorSha256 =
-              "sha256-pQpattmS9VmO3ZIQUFn66az8GSmB4IvYhTTCFn6SUmo=";
+              "sha256-eKeUhS2puz6ALb+cQKl7+DGvm9Cl+miZAHX0imf9wdg=";
           };
         });
 
@@ -34,7 +34,7 @@
         let pkgs = nixpkgsFor.${system};
         in {
           default = pkgs.mkShell {
-            buildInputs = with pkgs; [ go gopls gotools go-tools ];
+            buildInputs = with pkgs; [ go gopls gotools go-tools age ];
           };
         });
 

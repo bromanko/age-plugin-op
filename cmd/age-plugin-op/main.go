@@ -20,10 +20,10 @@ type PluginOptions struct {
 
 var example = `
   $ age-plugin-op --generate -o age-identity.txt
-  # Created: TODO
-  # Recipient: TODO
+  # Created: 2024-02-16 13:25:00.433868 -0800 PST m=+0.003075709
+  # Recipient: age1op102xjaf99y9u69cf64cl8trptuenerd3gal8t4hc2exd8z4ntvpyquwaf9l
 
-  [...]
+  AGE-PLUGIN-OP-1Q9D7XC8RDFW0X3F9P7R9WGZDTST5V22CQUMUM3MK6VTKWKJ[...]
 
   $ echo "Hello World" | age -r "" > secret.age
 

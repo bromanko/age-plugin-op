@@ -55,7 +55,7 @@ func Marshal(w io.Writer) {
 
 func MarshalIdentity(i *Identity, recipient *Recipient, w io.Writer) error {
 	Marshal(w)
-	_, _ = fmt.Fprintf(w, "# Recipient: %v\n", recipient)
+	_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
 	_, _ = fmt.Fprintf(w, "\n%s\n", EncodeIdentity(i))
 	return nil
 }

@@ -52,11 +52,29 @@ func SetLogger() {
 	plugin.SetLogger(w)
 }
 
-func RunCli(cmd *cobra.Command) error {
+func RunCli(cmd *cobra.Command, out io.Writer) error {
 	switch {
+	case pluginOptions.Generate:
+		if pluginOptions.OutputFile != "" && pluginOptions.OutputFile != "-" {
+			f, err := os.OpenFile(pluginOptions.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			out = f
+		}
+
+		identity, recipient, err := plugin.CreateIdentity()
+		if err != nil {
+			return err
+		}
+		if err = plugin.MarshalIdentity(identity, recipient, out); err != nil {
+			return err
+		}
 	default:
 		return cmd.Help()
 	}
+	return nil
 }
 
 func RunPlugin(cmd *cobra.Command, _ []string) error {
@@ -66,7 +84,7 @@ func RunPlugin(cmd *cobra.Command, _ []string) error {
 	case "identity-v1":
 		plugin.Log.Println("Got identity-v1")
 	default:
-		return RunCli(cmd)
+		return RunCli(cmd, os.Stdout)
 	}
 	return nil
 }

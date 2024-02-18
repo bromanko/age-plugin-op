@@ -1,12 +1,11 @@
 package main
 
 import (
+	"github.com/bromanko/age-plugin-op/plugin"
+	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"os"
-
-	"github.com/bromanko/age-plugin-op/plugin"
-	"github.com/spf13/cobra"
 )
 
 type PluginOptions struct {

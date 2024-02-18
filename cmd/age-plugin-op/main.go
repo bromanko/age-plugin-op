@@ -93,21 +93,13 @@ func pluginFlags(cmd *cobra.Command, _ *PluginOptions) error {
 	flags := cmd.Flags()
 	flags.SortFlags = false
 
-	//flags.BoolVarP(&pluginOptions.Convert, "convert", "y", false, "Convert identities to recipients.")
 	flags.StringVarP(&pluginOptions.OutputFile, "output", "o", "", "Write the result to the file.")
 
 	flags.BoolVarP(&pluginOptions.Generate, "generate", "g", false, "Generate a identity.")
-	//flags.BoolVarP(&pluginOptions.PIN, "pin", "p", false, "Include a pin with the key. Alternatively export AGE_TPM_PIN.")
 
 	flags.StringVar(&pluginOptions.LogFile, "log-file", "", "Logging file for debug output")
 
-	//flags.BoolVar(&pluginOptions.SwTPM, "swtpm", false, "Use a software TPM for key storage (Testing only and requires swtpm installed)")
-
-	//flags.BoolVar(&pluginOptions.Decrypt, "decrypt", false, "wip")
-	//flags.BoolVar(&pluginOptions.Encrypt, "encrypt", false, "wip")
 	flags.StringVar(&pluginOptions.AgePlugin, "age-plugin", "", "internal use")
-	//flags.MarkHidden("decrypt")
-	//flags.MarkHidden("encrypt")
 	return flags.MarkHidden("age-plugin")
 }
 

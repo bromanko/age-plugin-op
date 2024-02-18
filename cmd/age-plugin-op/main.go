@@ -43,7 +43,7 @@ var (
 func SetLogger() {
 	var w io.Writer
 	if pluginOptions.LogFile != "" {
-		w, _ = os.Open(pluginOptions.LogFile)
+		w, _ = os.OpenFile(pluginOptions.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	} else if os.Getenv("AGEDEBUG") != "" {
 		w = os.Stderr
 	} else {

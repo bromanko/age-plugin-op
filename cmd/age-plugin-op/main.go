@@ -25,7 +25,7 @@ var example = `
 
   AGE-PLUGIN-OP-1Q9D7XC8RDFW0X3F9P7R9WGZDTST5V22CQUMUM3MK6VTKWKJ[...]
 
-  $ echo "Hello World" | age -r "" > secret.age
+  $ echo "Hello World" | age -r "age1op102xjaf99y9u69cf64cl8trptuenerd3gal8t4hc2exd8z4ntvpyquwaf9l" > secret.age
 
   $ age --decrypt -i age-identity.txt -o - secret.age
   Hello World`

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"filippo.io/age"
 	"filippo.io/age/plugin"
+	"fmt"
 )
 
 type OpRecipient struct {
@@ -42,14 +43,14 @@ func EncodeRecipient(r *OpRecipient) string {
 	return plugin.EncodeRecipient(Name, b.Bytes())
 }
 
-//func DecodeRecipient(s string) (*OpRecipient, error) {
-//	name, b, err := plugin.ParseRecipient(s)
-//	if err != nil {
-//		return nil, fmt.Errorf("failed to decode recipient: %v", err)
-//	}
-//	if name != Name {
-//		return nil, fmt.Errorf("invalid plugin for type %s", name)
-//	}
-//
-//	return NewRecipient(&key), nil
-//}
+func DecodeOpKeyPath(s string) (string, error) {
+	name, b, err := plugin.ParseRecipient(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode recipient: %v", err)
+	}
+	if name != Name {
+		return "", fmt.Errorf("invalid plugin for type %s", name)
+	}
+
+	return string(b), nil
+}

@@ -34,3 +34,15 @@ func CreateIdentity(privateKeyPath string) (*age.Identity, *OpRecipient, error) 
 
 	return &identity, r, nil
 }
+
+func EncryptFileKey(fileKey []byte, i *age.Identity) ([]*age.Stanza, error) {
+
+	switch sshR := (*i).(type) {
+	case *agessh.Ed25519Identity:
+		return sshR.Recipient().Wrap(fileKey)
+	case *agessh.RSAIdentity:
+		return sshR.Recipient().Wrap(fileKey)
+	default:
+		return nil, fmt.Errorf("unsupported recipient type: %T", sshR)
+	}
+}

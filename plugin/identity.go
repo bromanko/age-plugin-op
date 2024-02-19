@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/binary"
+	"filippo.io/age"
 	"filippo.io/age/plugin"
 	"fmt"
 	"io"
@@ -53,9 +54,9 @@ func Marshal(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "%s\n", s)
 }
 
-func MarshalIdentity(i *Identity, recipient *Recipient, w io.Writer) error {
+func MarshalIdentity(i *age.Identity, recipient *age.Recipient, w io.Writer) error {
 	Marshal(w)
-	_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
-	_, _ = fmt.Fprintf(w, "\n%s\n", EncodeIdentity(i))
+	//_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
+	//_, _ = fmt.Fprintf(w, "\n%s\n", EncodeIdentity(i))
 	return nil
 }

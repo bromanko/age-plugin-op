@@ -63,7 +63,7 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 			out = f
 		}
 
-		identity, recipient, err := plugin.CreateIdentity()
+		identity, recipient, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
 		if err != nil {
 			return err
 		}

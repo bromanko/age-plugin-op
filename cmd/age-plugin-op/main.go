@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"encoding/base64"
 	"github.com/bromanko/age-plugin-op/plugin"
 	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"os"
+	"strings"
 )
 
 type PluginOptions struct {
@@ -63,11 +66,11 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 			out = f
 		}
 
-		identity, recipient, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
+		_, recipient, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
 		if err != nil {
 			return err
 		}
-		if err = plugin.MarshalIdentity(identity, recipient, out); err != nil {
+		if err = plugin.MarshalIdentity(recipient, out); err != nil {
 			return err
 		}
 	default:
@@ -76,10 +79,55 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 	return nil
 }
 
+func b64Decode(s string) ([]byte, error) {
+	return base64.RawStdEncoding.Strict().DecodeString(s)
+}
+
+func b64Encode(s []byte) string {
+	return base64.RawStdEncoding.Strict().EncodeToString(s)
+}
+
+func RunRecipientV1(stdin io.Reader, stdout io.StringWriter) error {
+	var entry string
+	var key string
+	recipients := []string{}
+	scanner := bufio.NewScanner(stdin)
+parser:
+	for scanner.Scan() {
+		entry = scanner.Text()
+		if len(entry) == 0 {
+			continue
+		}
+		entry = strings.TrimPrefix(entry, "-> ")
+		cmd := strings.SplitN(entry, " ", 2)
+		plugin.Log.Printf("scanned: '%s'\n", cmd[0])
+		switch cmd[0] {
+		case "add-recipient":
+			// Only one recipient?
+			plugin.Log.Printf("add-recipient: %s\n", cmd[1])
+			recipients = append(recipients, cmd[1])
+		case "wrap-file-key":
+			scanner.Scan()
+			plugin.Log.Printf("wrap-file-key: %s\n", key)
+
+		case "done":
+			break parser
+		}
+	}
+
+	_, _ = stdout.WriteString("-> done\n\n")
+	return nil
+}
+
 func RunPlugin(cmd *cobra.Command, _ []string) error {
 	switch pluginOptions.AgePlugin {
 	case "recipient-v1":
 		plugin.Log.Println("Got recipient-v1")
+		if err := RunRecipientV1(os.Stdin, os.Stdout); err != nil {
+			_, _ = os.Stdout.WriteString("-> error\n")
+			_, _ = os.Stdout.WriteString(b64Encode([]byte(err.Error())) + "\n")
+			return err
+		}
 	case "identity-v1":
 		plugin.Log.Println("Got identity-v1")
 	default:

@@ -1,46 +1,41 @@
 package plugin
 
 import (
-	"bytes"
-	"crypto/ed25519"
-	"encoding/binary"
-	"filippo.io/age"
-	"filippo.io/age/plugin"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 )
 
-type Identity struct {
-	Version uint8
-	Private *ed25519.PrivateKey
-	Public  *ed25519.PublicKey
-}
-
-func (i *Identity) Serialize() []any {
-	return []interface{}{
-		&i.Version,
-	}
-}
-
-func (i *Identity) Recipient() *Recipient {
-	return NewRecipient(i.Public)
-}
-
-func EncodeIdentity(i *Identity) string {
-	var b bytes.Buffer
-	for _, v := range i.Serialize() {
-		_ = binary.Write(&b, binary.BigEndian, v)
-	}
-
-	var pub []byte
-	pub = append(pub, *i.Public...)
-	pub = append(pub, *i.Private...)
-	b.Write(pub)
-
-	return plugin.EncodeIdentity(Name, b.Bytes())
-}
+//type Identity struct {
+//	Version uint8
+//	Private *ed25519.PrivateKey
+//	Public  *ed25519.PublicKey
+//}
+//
+//func (i *Identity) Serialize() []any {
+//	return []interface{}{
+//		&i.Version,
+//	}
+//}
+//
+//func (i *Identity) Recipient() *Recipient {
+//	return NewRecipient(i.Public)
+//}
+//
+//func EncodeIdentity(i *Identity) string {
+//	var b bytes.Buffer
+//	for _, v := range i.Serialize() {
+//		_ = binary.Write(&b, binary.BigEndian, v)
+//	}
+//
+//	var pub []byte
+//	pub = append(pub, *i.Public...)
+//	pub = append(pub, *i.Private...)
+//	b.Write(pub)
+//
+//	return plugin.EncodeIdentity(Name, b.Bytes())
+//}
 
 var (
 	marshalTemplate = `
@@ -54,9 +49,9 @@ func Marshal(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "%s\n", s)
 }
 
-func MarshalIdentity(i *age.Identity, recipient *age.Recipient, w io.Writer) error {
+func MarshalIdentity(recipient *OpRecipient, w io.Writer) error {
 	Marshal(w)
-	//_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
+	_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
 	//_, _ = fmt.Fprintf(w, "\n%s\n", EncodeIdentity(i))
 	return nil
 }

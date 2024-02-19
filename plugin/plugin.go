@@ -13,7 +13,7 @@ const (
 
 // CreateIdentity creates a new identity.
 // Returns the identity and the corresponding recipient.
-func CreateIdentity(privateKeyPath string) (*age.Identity, *age.Recipient, error) {
+func CreateIdentity(privateKeyPath string) (*age.Identity, *OpRecipient, error) {
 	// TODO - replace this with load from 1Password
 	privateKey, err := os.ReadFile(privateKeyPath)
 	if err != nil {
@@ -32,6 +32,7 @@ func CreateIdentity(privateKeyPath string) (*age.Identity, *age.Recipient, error
 	case *agessh.RSAIdentity:
 		recipient = id.Recipient()
 	}
+	r := NewRecipient(privateKeyPath, &recipient)
 
-	return &identity, &recipient, nil
+	return &identity, r, nil
 }

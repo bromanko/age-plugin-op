@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -89,7 +90,7 @@ func b64Encode(s []byte) string {
 	return base64.RawStdEncoding.Strict().EncodeToString(s)
 }
 
-func RunRecipientV1(stdin io.Reader, stdout io.StringWriter) error {
+func RunRecipientV1(stdin io.Reader, stdout io.Writer) error {
 	time.Sleep(10 * time.Second) // Allow time to attach debugger todo remove
 
 	var entry string
@@ -143,23 +144,44 @@ parser:
 		opRecipients = append(opRecipients, i.Recipient())
 	}
 	for _, fileKeyb64 := range fileKeys {
-		for _, recipient := range opRecipients {
+		for i, recipient := range opRecipients {
 			fileKey, err := b64Decode(fileKeyb64)
 			if err != nil {
-				return err
+				errors = append(errors, plugin.NewInternalErrorStanza(err))
 			}
-			s, err := recipient.Wrap(fileKey)
+			wrapStanzas, err := recipient.Wrap(fileKey)
 			if err != nil {
 				plugin.Log.Println("failed to wrap file key: %w", err)
 				errors = append(errors, plugin.NewInternalErrorStanza(err))
 			}
-			stanzas = append(stanzas, s...)
+			for _, wrapStanza := range wrapStanzas {
+				s := &age.Stanza{
+					Type: "recipient-stanza",
+					Args: append([]string{strconv.Itoa(i), wrapStanza.Type}, wrapStanza.Args...),
+					Body: wrapStanza.Body,
+				}
+				stanzas = append(stanzas, s)
+			}
 		}
 	}
 
-	// todo write the stanzas and the errors
+	if len(errors) > 0 {
+		for _, e := range errors {
+			err := plugin.MarshalStanza(e, stdout)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for _, s := range stanzas {
+			err := plugin.MarshalStanza(s, stdout)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
-	_, _ = stdout.WriteString("-> done\n\n")
+	_, _ = io.WriteString(stdout, "-> done\n\n")
 	return nil
 }
 
@@ -167,11 +189,7 @@ func RunPlugin(cmd *cobra.Command, _ []string) error {
 	switch pluginOptions.AgePlugin {
 	case "recipient-v1":
 		plugin.Log.Println("Got recipient-v1")
-		if err := RunRecipientV1(os.Stdin, os.Stdout); err != nil {
-			_, _ = os.Stdout.WriteString("-> error\n")
-			_, _ = os.Stdout.WriteString(b64Encode([]byte(err.Error())) + "\n")
-			return err
-		}
+		return RunRecipientV1(os.Stdin, os.Stdout)
 	case "identity-v1":
 		plugin.Log.Println("Got identity-v1")
 	default:

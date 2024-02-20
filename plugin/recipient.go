@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"filippo.io/age"
+	"filippo.io/age/agessh"
 	"filippo.io/age/plugin"
 	"fmt"
 )
@@ -35,8 +36,22 @@ func NewRecipient(opPath string) *OpRecipient {
 }
 
 func (r *OpRecipient) Wrap(fileKey []byte) ([]*age.Stanza, error) {
-	//TODO implement me
-	panic("implement me")
+	pkey, err := ReadKeyOp(r.privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+	}
+	i, err := agessh.ParseIdentity(pkey)
+	if err != nil {
+		return nil, err
+	}
+	switch i := i.(type) {
+	case *agessh.RSAIdentity:
+		return i.Recipient().Wrap(fileKey)
+	case *agessh.Ed25519Identity:
+		return i.Recipient().Wrap(fileKey)
+	default:
+		return nil, fmt.Errorf("unsupported key type: %T", i)
+	}
 }
 
 func EncodeRecipient(r *OpRecipient) string {

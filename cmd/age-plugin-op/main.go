@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/base64"
+	"filippo.io/age"
 	"github.com/bromanko/age-plugin-op/plugin"
 	"github.com/spf13/cobra"
 	"io"
@@ -89,11 +90,15 @@ func b64Encode(s []byte) string {
 }
 
 func RunRecipientV1(stdin io.Reader, stdout io.StringWriter) error {
-	var entry string
-	var key string
-	recipients := []string{}
-	scanner := bufio.NewScanner(stdin)
 	time.Sleep(10 * time.Second) // Allow time to attach debugger todo remove
+
+	var entry string
+	scanner := bufio.NewScanner(stdin)
+
+	var recipients []string
+	var identities []string
+	var fileKeys []string
+	// Phase 1
 parser:
 	for scanner.Scan() {
 		entry = scanner.Text()
@@ -103,19 +108,56 @@ parser:
 		entry = strings.TrimPrefix(entry, "-> ")
 		cmd := strings.SplitN(entry, " ", 2)
 		plugin.Log.Printf("scanned: '%s'\n", cmd[0])
+
 		switch cmd[0] {
 		case "add-recipient":
-			// Only one recipient?
 			plugin.Log.Printf("add-recipient: %s\n", cmd[1])
 			recipients = append(recipients, cmd[1])
+		case "add-identity":
+			plugin.Log.Printf("add-identity: %s\n", cmd[1])
+			identities = append(identities, cmd[1])
 		case "wrap-file-key":
 			scanner.Scan()
-			plugin.Log.Printf("wrap-file-key: %s\n", key)
-
+			keyB64 := scanner.Text()
+			plugin.Log.Printf("wrap-file-key: %s\n", keyB64)
+			fileKeys = append(fileKeys, keyB64)
 		case "done":
 			break parser
 		}
 	}
+
+	// Phase 2
+	var stanzas []*age.Stanza
+	var errors []*age.Stanza
+	var opRecipients []*plugin.OpRecipient
+	for i, recipient := range recipients {
+		r, err := plugin.DecodeRecipient(recipient)
+		if err != nil {
+			plugin.Log.Println("failed to decode recipient: %w", err)
+			errors = append(errors, plugin.NewIndexedErrorStanza("recipient", i, err))
+		}
+		opRecipients = append(opRecipients, r)
+	}
+	for _, identity := range identities {
+		i := plugin.ParseIdentity(identity)
+		opRecipients = append(opRecipients, i.Recipient())
+	}
+	for _, fileKeyb64 := range fileKeys {
+		for _, recipient := range opRecipients {
+			fileKey, err := b64Decode(fileKeyb64)
+			if err != nil {
+				return err
+			}
+			s, err := recipient.Wrap(fileKey)
+			if err != nil {
+				plugin.Log.Println("failed to wrap file key: %w", err)
+				errors = append(errors, plugin.NewInternalErrorStanza(err))
+			}
+			stanzas = append(stanzas, s...)
+		}
+	}
+
+	// todo write the stanzas and the errors
 
 	_, _ = stdout.WriteString("-> done\n\n")
 	return nil

@@ -1,8 +1,6 @@
 package plugin
 
 import (
-	"filippo.io/age"
-	"filippo.io/age/agessh"
 	"fmt"
 )
 
@@ -21,15 +19,4 @@ func CreateIdentity(privateKeyPath string) (*OpIdentity, error) {
 	identity := ParseIdentity(privateKeyPath)
 
 	return identity, nil
-}
-
-func EncryptFileKey(fileKey []byte, i *age.Identity) ([]*age.Stanza, error) {
-	switch sshR := (*i).(type) {
-	case *agessh.Ed25519Identity:
-		return sshR.Recipient().Wrap(fileKey)
-	case *agessh.RSAIdentity:
-		return sshR.Recipient().Wrap(fileKey)
-	default:
-		return nil, fmt.Errorf("unsupported recipient type: %T", sshR)
-	}
 }

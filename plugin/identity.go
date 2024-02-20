@@ -1,41 +1,63 @@
 package plugin
 
 import (
+	"bytes"
+	"encoding/binary"
+	"filippo.io/age"
+	"filippo.io/age/plugin"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 )
 
-//type Identity struct {
-//	Version uint8
-//	Private *ed25519.PrivateKey
-//	Public  *ed25519.PublicKey
-//}
-//
-//func (i *Identity) Serialize() []any {
-//	return []interface{}{
-//		&i.Version,
-//	}
-//}
-//
-//func (i *Identity) Recipient() *Recipient {
-//	return NewRecipient(i.Public)
-//}
-//
-//func EncodeIdentity(i *Identity) string {
-//	var b bytes.Buffer
-//	for _, v := range i.Serialize() {
-//		_ = binary.Write(&b, binary.BigEndian, v)
-//	}
-//
-//	var pub []byte
-//	pub = append(pub, *i.Public...)
-//	pub = append(pub, *i.Private...)
-//	b.Write(pub)
-//
-//	return plugin.EncodeIdentity(Name, b.Bytes())
-//}
+const version = 1
+
+type OpIdentity struct {
+	Version        uint8
+	privateKeyPath string
+}
+
+var _ age.Identity = &OpIdentity{}
+
+func (i *OpIdentity) serialize() []any {
+	return []interface{}{
+		&i.Version,
+	}
+}
+
+func (i *OpIdentity) Unwrap(_ []*age.Stanza) ([]byte, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func NewOpIdentity(privateKeyPath string) *OpIdentity {
+	i := &OpIdentity{
+		Version:        version,
+		privateKeyPath: privateKeyPath,
+	}
+	return i
+}
+
+func (i *OpIdentity) Recipient() *OpRecipient {
+	return &OpRecipient{
+		privateKeyPath: i.privateKeyPath,
+	}
+}
+
+func ParseIdentity(privateKeyPath string) *OpIdentity {
+	return NewOpIdentity(privateKeyPath)
+}
+
+func encodeIdentity(i *OpIdentity) string {
+	var b bytes.Buffer
+	for _, v := range i.serialize() {
+		_ = binary.Write(&b, binary.BigEndian, v)
+	}
+
+	_ = binary.Write(&b, binary.BigEndian, i.privateKeyPath)
+
+	return plugin.EncodeIdentity(Name, b.Bytes())
+}
 
 var (
 	marshalTemplate = `
@@ -49,9 +71,9 @@ func Marshal(w io.Writer) {
 	_, _ = fmt.Fprintf(w, "%s\n", s)
 }
 
-func MarshalIdentity(recipient *OpRecipient, w io.Writer) error {
+func MarshalIdentity(i *OpIdentity, w io.Writer) error {
 	Marshal(w)
-	_, _ = fmt.Fprintf(w, "# Recipient: %s\n", recipient)
-	//_, _ = fmt.Fprintf(w, "\n%s\n", EncodeIdentity(i))
+	_, _ = fmt.Fprintf(w, "# Recipient: %s\n", i.Recipient())
+	_, _ = fmt.Fprintf(w, "\n%s\n", encodeIdentity(i))
 	return nil
 }

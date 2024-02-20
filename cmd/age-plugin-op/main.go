@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
-	"fmt"
 	"github.com/bromanko/age-plugin-op/plugin"
 	"github.com/spf13/cobra"
 	"io"
@@ -69,11 +67,11 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 			out = f
 		}
 
-		_, recipient, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
+		id, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
 		if err != nil {
 			return err
 		}
-		if err = plugin.MarshalIdentity(recipient, out); err != nil {
+		if err = plugin.MarshalIdentity(id, out); err != nil {
 			return err
 		}
 	default:
@@ -112,43 +110,7 @@ parser:
 			recipients = append(recipients, cmd[1])
 		case "wrap-file-key":
 			scanner.Scan()
-			keyB64 := scanner.Text()
 			plugin.Log.Printf("wrap-file-key: %s\n", key)
-
-			// TODO: Support multiple identities
-			idStr := recipients[0]
-			privateKeyPath, err := plugin.DecodeOpKeyPath(idStr)
-			if err != nil {
-				return err
-			}
-			identity, recipient, err := plugin.CreateIdentity(privateKeyPath)
-			log.Printf("recipient: %v", recipient)
-
-			fileKey, err := b64Decode(keyB64)
-			if err != nil {
-				return err
-			}
-			log.Printf("fileKey: %v", fileKey)
-
-			// TODO - handle more than one stanza
-			stanzas, err := plugin.EncryptFileKey(fileKey, identity)
-			if err != nil {
-				return err
-			}
-			plugin.Log.Printf("stanzas: %v", stanzas)
-
-			_, _ = stdout.WriteString(fmt.Sprintf("-> recipient-stanza 0 %s %s %s\n", stanzas[0].Type, b64Encode(recipient.Tag()), b64Encode(stanzas[0].Body)))
-
-			// We can only write 48 bytes pr line
-			// chunk the output before b64 encoding it
-			r := bytes.NewBuffer(stanzas[0].Body)
-			for {
-				if r.Len() == 0 {
-					break
-				}
-				b := r.Next(48)
-				_, _ = stdout.WriteString(b64Encode(b) + "\n")
-			}
 
 		case "done":
 			break parser

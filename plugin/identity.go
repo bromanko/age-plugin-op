@@ -54,7 +54,10 @@ func encodeIdentity(i *OpIdentity) string {
 		_ = binary.Write(&b, binary.BigEndian, v)
 	}
 
-	_ = binary.Write(&b, binary.BigEndian, i.privateKeyPath)
+	err := binary.Write(&b, binary.BigEndian, []byte(i.privateKeyPath))
+	if err != nil {
+		Log.Printf("failed to encode identity: %v", err)
+	}
 
 	return plugin.EncodeIdentity(Name, b.Bytes())
 }

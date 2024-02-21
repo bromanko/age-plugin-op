@@ -275,7 +275,7 @@ parser:
 		}
 		opIdentities = append(opIdentities, identity)
 	}
-	for _, fileKey := range fileKeys {
+	for i, fileKey := range fileKeys {
 		if fileKey.Args[1] != "ssh-rsa" && fileKey.Args[1] != "ssh-ed25519" {
 			plugin.Log.Println("not an ssh key")
 			continue
@@ -315,6 +315,7 @@ parser:
 		}
 		s := &age.Stanza{
 			Type: "file-key",
+			Args: []string{strconv.Itoa(i)},
 			Body: unwrappedKey,
 		}
 		stanzas = append(stanzas, s)

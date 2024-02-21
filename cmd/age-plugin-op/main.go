@@ -13,20 +13,17 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type PluginOptions struct {
 	AgePlugin  string
-	Generate   bool
-	Decrypt    bool
-	Encrypt    bool
+	Generate   string
 	OutputFile string
 	LogFile    string
 }
 
 var example = `
-  $ age-plugin-op --generate -o age-identity.txt
+  $ age-plugin-op --generate "op://Personal/wxrzetxonuggniebjzruxycq/private key" -o age-identity.txt
   # Created: 2024-02-16 13:25:00.433868 -0800 PST m=+0.003075709
   # Recipient: age1op102xjaf99y9u69cf64cl8trptuenerd3gal8t4hc2exd8z4ntvpyquwaf9l
 
@@ -41,7 +38,7 @@ var (
 	pluginOptions = PluginOptions{}
 	rootCmd       = &cobra.Command{
 		Use:     "age-plugin-op",
-		Long:    "age-plugin-op is a tool to generate age compatible identities backed by 1Password.",
+		Long:    "age-plugin-op is a tool to generate age compatible identities backed by 1Password SSH keys.",
 		Example: example,
 		RunE:    RunPlugin,
 	}
@@ -61,7 +58,7 @@ func SetLogger() {
 
 func RunCli(cmd *cobra.Command, out io.Writer) error {
 	switch {
-	case pluginOptions.Generate:
+	case pluginOptions.Generate != "":
 		if pluginOptions.OutputFile != "" && pluginOptions.OutputFile != "-" {
 			f, err := os.OpenFile(pluginOptions.OutputFile, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 			if err != nil {
@@ -71,7 +68,7 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 			out = f
 		}
 
-		id, err := plugin.CreateIdentity("/Users/bromanko/Code/age-plugin-op/id_ed25519")
+		id, err := plugin.CreateIdentity(pluginOptions.Generate)
 		if err != nil {
 			return err
 		}
@@ -112,8 +109,6 @@ func respondWithStanzas(w io.Writer, errors, stanzas []*age.Stanza) error {
 }
 
 func RunRecipientV1(stdin io.Reader, stdout io.Writer) error {
-	time.Sleep(10 * time.Second) // Allow time to attach debugger todo remove
-
 	var entry string
 	scanner := bufio.NewScanner(stdin)
 
@@ -199,8 +194,6 @@ parser:
 var footerPrefix = []byte("---")
 
 func RunIdentityV1(stdin io.Reader, stdout io.Writer) error {
-	time.Sleep(10 * time.Second) // Allow time to attach debugger todo remove
-
 	var recipients []*age.Stanza
 	var identities []*age.Stanza
 	var fileKeys []*age.Stanza
@@ -349,7 +342,7 @@ func pluginFlags(cmd *cobra.Command, _ *PluginOptions) error {
 
 	flags.StringVarP(&pluginOptions.OutputFile, "output", "o", "", "Write the result to the file.")
 
-	flags.BoolVarP(&pluginOptions.Generate, "generate", "g", false, "Generate a identity.")
+	flags.StringVarP(&pluginOptions.Generate, "generate", "g", "", "Generate a identity based on a 1Password SSH key.")
 
 	flags.StringVar(&pluginOptions.LogFile, "log-file", "", "Logging file for debug output")
 

@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"filippo.io/age"
+	"fmt"
 	"github.com/bromanko/age-plugin-op/plugin"
 	"github.com/spf13/cobra"
 	"io"
@@ -82,12 +84,31 @@ func RunCli(cmd *cobra.Command, out io.Writer) error {
 	return nil
 }
 
+func b64Encode(s []byte) string {
+	return base64.RawStdEncoding.Strict().EncodeToString(s)
+}
+
 func b64Decode(s string) ([]byte, error) {
 	return base64.RawStdEncoding.Strict().DecodeString(s)
 }
 
-func b64Encode(s []byte) string {
-	return base64.RawStdEncoding.Strict().EncodeToString(s)
+func respondWithStanzas(w io.Writer, errors, stanzas []*age.Stanza) error {
+	if len(errors) > 0 {
+		for _, e := range errors {
+			err := plugin.MarshalStanza(e, w)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for _, s := range stanzas {
+			err := plugin.MarshalStanza(s, w)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func RunRecipientV1(stdin io.Reader, stdout io.Writer) error {
@@ -155,9 +176,10 @@ parser:
 				errors = append(errors, plugin.NewInternalErrorStanza(err))
 			}
 			for _, wrapStanza := range wrapStanzas {
+				tag := b64Encode(recipient.Tag())
 				s := &age.Stanza{
 					Type: "recipient-stanza",
-					Args: append([]string{strconv.Itoa(i), wrapStanza.Type}, wrapStanza.Args...),
+					Args: append([]string{strconv.Itoa(i), wrapStanza.Type, tag}, wrapStanza.Args...),
 					Body: wrapStanza.Body,
 				}
 				stanzas = append(stanzas, s)
@@ -165,20 +187,142 @@ parser:
 		}
 	}
 
-	if len(errors) > 0 {
-		for _, e := range errors {
-			err := plugin.MarshalStanza(e, stdout)
+	err := respondWithStanzas(stdout, errors, stanzas)
+	if err != nil {
+		return err
+	}
+
+	_, _ = io.WriteString(stdout, "-> done\n\n")
+	return nil
+}
+
+var footerPrefix = []byte("---")
+
+func RunIdentityV1(stdin io.Reader, stdout io.Writer) error {
+	time.Sleep(10 * time.Second) // Allow time to attach debugger todo remove
+
+	var recipients []*age.Stanza
+	var identities []*age.Stanza
+	var fileKeys []*age.Stanza
+
+	//var entry string
+	rr := bufio.NewReader(stdin)
+	sr := plugin.NewStanzaReader(rr)
+
+	// Phase 1
+parser:
+	for {
+		peek, err := rr.Peek(len(footerPrefix))
+		if err != nil {
+			return fmt.Errorf("failed to read header: %w", err)
+		}
+
+		if bytes.Equal(peek, footerPrefix) {
+			line, err := rr.ReadBytes('\n')
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to read header: %w", err)
+			}
+
+			prefix, args := plugin.SplitArgs(line)
+			if prefix != string(footerPrefix) || len(args) != 1 {
+				return fmt.Errorf("malformed closing line: %q", line)
+			}
+			mac, err := plugin.DecodeString(args[0])
+			if err != nil || len(mac) != 32 {
+				return fmt.Errorf("malformed closing line %q: %v", line, err)
+			}
+			break
+		}
+
+		s, err := sr.ReadStanza()
+		if err != nil {
+			return fmt.Errorf("failed to parse header: %w", err)
+		}
+
+		switch s.Type {
+		case "add-recipient":
+			plugin.Log.Printf("add-recipient: %s\n", s.Args)
+			recipients = append(recipients, s)
+		case "add-identity":
+			plugin.Log.Printf("add-identity: %s\n", s.Args)
+			identities = append(identities, s)
+		case "recipient-stanza":
+			plugin.Log.Printf("recipient-stanza: %s\n", s.Args)
+			fileKeys = append(fileKeys, s)
+		case "done":
+			break parser
+		}
+	}
+
+	// Phase 2
+	var stanzas []*age.Stanza
+	var errors []*age.Stanza
+	var opIdentities []*plugin.OpIdentity
+	for i, recipient := range recipients {
+		r, err := plugin.DecodeRecipient(recipient.Args[0])
+		if err != nil {
+			plugin.Log.Println("failed to decode recipient: %w", err)
+			errors = append(errors, plugin.NewIndexedErrorStanza("recipient", i, err))
+		}
+		opIdentities = append(opIdentities, r.Identity())
+	}
+	for i, identity := range identities {
+		identity, err := plugin.DecodeIdentity(identity.Args[0])
+		if err != nil {
+			plugin.Log.Println("failed to decode identity: %w", err)
+			errors = append(errors, plugin.NewIndexedErrorStanza("identity", i, err))
+			continue
+		}
+		opIdentities = append(opIdentities, identity)
+	}
+	for _, fileKey := range fileKeys {
+		if fileKey.Args[1] != "ssh-rsa" && fileKey.Args[1] != "ssh-ed25519" {
+			plugin.Log.Println("not an ssh key")
+			continue
+		}
+
+		_, err := b64Decode(fileKey.Args[2])
+		if err != nil {
+			return fmt.Errorf("failed base64 decode tag: %v", err)
+		}
+
+		_, err = b64Decode(fileKey.Args[3])
+		if err != nil {
+			return fmt.Errorf("failed base64 decode session key: %v", err)
+		}
+
+		// find the identity with the matching tag
+		var matchingIdentity *plugin.OpIdentity
+		for _, identity := range opIdentities {
+			tag, _ := b64Decode(fileKey.Args[2])
+			if bytes.Equal(identity.Recipient().Tag(), tag) {
+				matchingIdentity = identity
 			}
 		}
-	} else {
-		for _, s := range stanzas {
-			err := plugin.MarshalStanza(s, stdout)
-			if err != nil {
-				return err
-			}
+		if matchingIdentity == nil {
+			return fmt.Errorf("no matching identity found for tag: %v", fileKey.Args[2])
 		}
+
+		sshStanza := &age.Stanza{
+			Type: fileKey.Args[1],
+			Args: fileKey.Args[3:],
+			Body: fileKey.Body,
+		}
+		unwrappedKey, err := matchingIdentity.Unwrap([]*age.Stanza{sshStanza})
+		if err != nil {
+			plugin.Log.Printf("failed to unwrap file key: %v", err)
+			errors = append(errors, plugin.NewInternalErrorStanza(err))
+		}
+		s := &age.Stanza{
+			Type: "file-key",
+			Body: unwrappedKey,
+		}
+		stanzas = append(stanzas, s)
+	}
+
+	err := respondWithStanzas(stdout, errors, stanzas)
+	if err != nil {
+		return err
 	}
 
 	_, _ = io.WriteString(stdout, "-> done\n\n")
@@ -192,10 +336,10 @@ func RunPlugin(cmd *cobra.Command, _ []string) error {
 		return RunRecipientV1(os.Stdin, os.Stdout)
 	case "identity-v1":
 		plugin.Log.Println("Got identity-v1")
+		return RunIdentityV1(os.Stdin, os.Stdout)
 	default:
 		return RunCli(cmd, os.Stdout)
 	}
-	return nil
 }
 
 func pluginFlags(cmd *cobra.Command, _ *PluginOptions) error {

@@ -35,6 +35,10 @@ func NewRecipient(opPath string) *OpRecipient {
 	}
 }
 
+func (r *OpRecipient) Identity() *OpIdentity {
+	return NewOpIdentity(r.privateKeyPath)
+}
+
 func (r *OpRecipient) Wrap(fileKey []byte) ([]*age.Stanza, error) {
 	pkey, err := ReadKeyOp(r.privateKeyPath)
 	if err != nil {

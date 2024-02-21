@@ -22,8 +22,6 @@ func NewInternalErrorStanza(err error) *age.Stanza {
 	}
 }
 
-var stanzaPrefix = []byte("->")
-
 func MarshalStanza(s *age.Stanza, w io.Writer) error {
 	if _, err := w.Write(stanzaPrefix); err != nil {
 		return err

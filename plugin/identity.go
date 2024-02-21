@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"filippo.io/age"
+	"filippo.io/age/agessh"
 	"filippo.io/age/plugin"
 	"fmt"
 	"io"
@@ -26,8 +27,24 @@ func (i *OpIdentity) serialize() []any {
 	}
 }
 
-func (i *OpIdentity) Unwrap(_ []*age.Stanza) ([]byte, error) {
-	return nil, fmt.Errorf("not implemented")
+func (i *OpIdentity) Unwrap(stanzas []*age.Stanza) ([]byte, error) {
+	pkey, err := ReadKeyOp(i.privateKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+	}
+
+	ageIdentity, err := agessh.ParseIdentity(pkey)
+	if err != nil {
+		return nil, err
+	}
+	switch i := ageIdentity.(type) {
+	case *agessh.RSAIdentity:
+		return i.Unwrap(stanzas)
+	case *agessh.Ed25519Identity:
+		return i.Unwrap(stanzas)
+	default:
+		return nil, fmt.Errorf("unsupported key type: %T", i)
+	}
 }
 
 func NewOpIdentity(privateKeyPath string) *OpIdentity {
@@ -39,9 +56,7 @@ func NewOpIdentity(privateKeyPath string) *OpIdentity {
 }
 
 func (i *OpIdentity) Recipient() *OpRecipient {
-	return &OpRecipient{
-		privateKeyPath: i.privateKeyPath,
-	}
+	return NewRecipient(i.privateKeyPath)
 }
 
 func ParseIdentity(privateKeyPath string) *OpIdentity {

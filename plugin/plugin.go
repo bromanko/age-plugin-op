@@ -1,7 +1,11 @@
 package plugin
 
 import (
+	"bytes"
+	"encoding/binary"
+	"filippo.io/age/plugin"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -19,4 +23,25 @@ func CreateIdentity(privateKeyPath string) (*OpIdentity, error) {
 	identity := ParseIdentity(privateKeyPath)
 
 	return identity, nil
+}
+
+func DecodeIdentity(s string) (*OpIdentity, error) {
+	var key OpIdentity
+	name, b, err := plugin.ParseIdentity(s)
+	if err != nil {
+		return nil, err
+	}
+	if name != Name {
+		return nil, fmt.Errorf("invalid hrp")
+	}
+	r := bytes.NewBuffer(b)
+	for _, f := range key.serialize() {
+		if err := binary.Read(r, binary.BigEndian, f); err != nil {
+			return nil, err
+		}
+	}
+
+	key.privateKeyPath = strings.TrimPrefix(string(b), "\x01")
+
+	return &key, nil
 }

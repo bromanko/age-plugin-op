@@ -17,6 +17,8 @@ jobs:
           - {GOOS: linux, GOARCH: amd64}
           - {GOOS: linux, GOARCH: arm, GOARM: 6}
           - {GOOS: linux, GOARCH: arm64}
+          - {GOOS: darwin, GOARCH: amd64 }
+          - {GOOS: darwin, GOARCH: arm64 }
 
     steps:
       - name: Checkout repository
@@ -31,6 +33,9 @@ jobs:
         with:
           # Disable diagnostics
           diagnostic-endpoint: ""
-      
+
       - name: Build
         run: nix build -L
+
+      - name: Verify build
+        run: ./result/bin/age-plugin-op --help

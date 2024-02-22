@@ -25,8 +25,7 @@
             pname = "age-plugin-op";
             inherit version;
             src = ./.;
-            vendorSha256 =
-              "sha256-eKeUhS2puz6ALb+cQKl7+DGvm9Cl+miZAHX0imf9wdg=";
+            vendorHash = "sha256-dhJdLYy/CDqZuF5/1v05/ZEp+cWJ6V4GnVCf+mUr1MU=";
           };
         });
 

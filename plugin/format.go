@@ -178,3 +178,35 @@ func isValidString(s string) bool {
 	}
 	return true
 }
+
+func ParseStanza(rr *bufio.Reader) (*age.Stanza, error) {
+	peek, err := rr.Peek(len(footerPrefix))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read header: %w", err)
+	}
+
+	if bytes.Equal(peek, footerPrefix) {
+		line, err := rr.ReadBytes('\n')
+		if err != nil {
+			return nil, fmt.Errorf("failed to read header: %w", err)
+		}
+
+		prefix, args := SplitArgs(line)
+		if prefix != string(footerPrefix) || len(args) != 1 {
+			return nil, fmt.Errorf("malformed closing line: %q", line)
+		}
+		mac, err := DecodeString(args[0])
+		if err != nil || len(mac) != 32 {
+			return nil, fmt.Errorf("malformed closing line %q: %v", line, err)
+		}
+	}
+
+	sr := NewStanzaReader(rr)
+
+	s, err := sr.ReadStanza()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse header: %w", err)
+	}
+
+	return s, nil
+}

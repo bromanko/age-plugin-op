@@ -12,7 +12,7 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
+	"time"
 )
 
 type PluginOptions struct {
@@ -90,7 +90,7 @@ func b64Decode(s string) ([]byte, error) {
 	return base64.RawStdEncoding.Strict().DecodeString(s)
 }
 
-func respondWithStanzas(w io.Writer, errors, stanzas []*age.Stanza) error {
+func respondWithStanzas(w io.Writer, errors []*age.Stanza, stanzas []*age.Stanza) error {
 	if len(errors) > 0 {
 		for _, e := range errors {
 			err := plugin.MarshalStanza(e, w)
@@ -110,35 +110,35 @@ func respondWithStanzas(w io.Writer, errors, stanzas []*age.Stanza) error {
 }
 
 func RunRecipientV1(stdin io.Reader, stdout io.Writer) error {
-	var entry string
-	scanner := bufio.NewScanner(stdin)
+	time.Sleep(10 * time.Second) // todo remove
 
-	var recipients []string
-	var identities []string
-	var fileKeys []string
+	var recipients []*age.Stanza
+	var identities []*age.Stanza
+	var fileKeys []*age.Stanza
+
+	rr := bufio.NewReader(stdin)
+
 	// Phase 1
 parser:
-	for scanner.Scan() {
-		entry = scanner.Text()
-		if len(entry) == 0 {
-			continue
+	for {
+		s, err := plugin.ParseStanza(rr)
+		if err != nil {
+			return err
 		}
-		entry = strings.TrimPrefix(entry, "-> ")
-		cmd := strings.SplitN(entry, " ", 2)
-		plugin.Log.Printf("scanned: '%s'\n", cmd[0])
+		if s == nil {
+			break
+		}
 
-		switch cmd[0] {
+		switch s.Type {
 		case "add-recipient":
-			plugin.Log.Printf("add-recipient: %s\n", cmd[1])
-			recipients = append(recipients, cmd[1])
+			plugin.Log.Printf("add-recipient: %s\n", s.Args)
+			recipients = append(recipients, s)
 		case "add-identity":
-			plugin.Log.Printf("add-identity: %s\n", cmd[1])
-			identities = append(identities, cmd[1])
+			plugin.Log.Printf("add-identity: %s\n", s.Args)
+			identities = append(identities, s)
 		case "wrap-file-key":
-			scanner.Scan()
-			keyB64 := scanner.Text()
-			plugin.Log.Printf("wrap-file-key: %s\n", keyB64)
-			fileKeys = append(fileKeys, keyB64)
+			plugin.Log.Printf("wrap-file-key: %s\n", s.Args)
+			fileKeys = append(fileKeys, s)
 		case "done":
 			break parser
 		}
@@ -148,25 +148,27 @@ parser:
 	var stanzas []*age.Stanza
 	var errors []*age.Stanza
 	var opRecipients []*plugin.OpRecipient
+
 	for i, recipient := range recipients {
-		r, err := plugin.DecodeRecipient(recipient)
+		r, err := plugin.DecodeRecipient(recipient.Args[0])
 		if err != nil {
 			plugin.Log.Println("failed to decode recipient: %w", err)
 			errors = append(errors, plugin.NewIndexedErrorStanza("recipient", i, err))
 		}
 		opRecipients = append(opRecipients, r)
 	}
-	for _, identity := range identities {
-		i := plugin.ParseIdentity(identity)
-		opRecipients = append(opRecipients, i.Recipient())
+	for i, identity := range identities {
+		identity, err := plugin.DecodeIdentity(identity.Args[0])
+		if err != nil {
+			plugin.Log.Println("failed to decode identity: %w", err)
+			errors = append(errors, plugin.NewIndexedErrorStanza("identity", i, err))
+			continue
+		}
+		opRecipients = append(opRecipients, identity.Recipient())
 	}
-	for _, fileKeyb64 := range fileKeys {
+	for _, fileKey := range fileKeys {
 		for i, recipient := range opRecipients {
-			fileKey, err := b64Decode(fileKeyb64)
-			if err != nil {
-				errors = append(errors, plugin.NewInternalErrorStanza(err))
-			}
-			wrapStanzas, err := recipient.Wrap(fileKey)
+			wrapStanzas, err := recipient.Wrap(fileKey.Body)
 			if err != nil {
 				plugin.Log.Println("failed to wrap file key: %w", err)
 				errors = append(errors, plugin.NewInternalErrorStanza(err))
@@ -192,45 +194,22 @@ parser:
 	return nil
 }
 
-var footerPrefix = []byte("---")
-
 func RunIdentityV1(stdin io.Reader, stdout io.Writer) error {
 	var recipients []*age.Stanza
 	var identities []*age.Stanza
 	var fileKeys []*age.Stanza
 
-	//var entry string
 	rr := bufio.NewReader(stdin)
-	sr := plugin.NewStanzaReader(rr)
 
 	// Phase 1
 parser:
 	for {
-		peek, err := rr.Peek(len(footerPrefix))
+		s, err := plugin.ParseStanza(rr)
 		if err != nil {
-			return fmt.Errorf("failed to read header: %w", err)
+			return err
 		}
-
-		if bytes.Equal(peek, footerPrefix) {
-			line, err := rr.ReadBytes('\n')
-			if err != nil {
-				return fmt.Errorf("failed to read header: %w", err)
-			}
-
-			prefix, args := plugin.SplitArgs(line)
-			if prefix != string(footerPrefix) || len(args) != 1 {
-				return fmt.Errorf("malformed closing line: %q", line)
-			}
-			mac, err := plugin.DecodeString(args[0])
-			if err != nil || len(mac) != 32 {
-				return fmt.Errorf("malformed closing line %q: %v", line, err)
-			}
+		if s == nil {
 			break
-		}
-
-		s, err := sr.ReadStanza()
-		if err != nil {
-			return fmt.Errorf("failed to parse header: %w", err)
 		}
 
 		switch s.Type {

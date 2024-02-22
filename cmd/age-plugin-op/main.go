@@ -37,10 +37,11 @@ var example = `
 var (
 	pluginOptions = PluginOptions{}
 	rootCmd       = &cobra.Command{
-		Use:     "age-plugin-op",
-		Long:    "age-plugin-op is a tool to generate age compatible identities backed by 1Password SSH keys.",
-		Example: example,
-		RunE:    RunPlugin,
+		Use:          "age-plugin-op",
+		Long:         "age-plugin-op is a tool to generate age compatible identities backed by 1Password SSH keys.",
+		Example:      example,
+		RunE:         RunPlugin,
+		SilenceUsage: true,
 	}
 )
 

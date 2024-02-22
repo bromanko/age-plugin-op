@@ -37,7 +37,7 @@ Age plugins must be available in the `$PATH`. Right now there are no pre-built b
 
 ## Supported SSH Key Types
 
-https://developer.1password.com/docs/ssh/agent/#eligible-keys
+Only RSA and ECD25519 keys are supported since these are the only types [supported by 1Password](https://developer.1password.com/docs/ssh/agent/#eligible-keys).
 
 ## Inspiration
 

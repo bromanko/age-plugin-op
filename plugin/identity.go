@@ -30,7 +30,7 @@ func (i *OpIdentity) serialize() []any {
 func (i *OpIdentity) Unwrap(stanzas []*age.Stanza) ([]byte, error) {
 	pkey, err := ReadKeyOp(i.privateKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+		return nil, err
 	}
 
 	ageIdentity, err := agessh.ParseIdentity(pkey)

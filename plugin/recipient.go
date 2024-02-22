@@ -42,7 +42,7 @@ func (r *OpRecipient) Identity() *OpIdentity {
 func (r *OpRecipient) Wrap(fileKey []byte) ([]*age.Stanza, error) {
 	pkey, err := ReadKeyOp(r.privateKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+		return nil, err
 	}
 	i, err := agessh.ParseIdentity(pkey)
 	if err != nil {

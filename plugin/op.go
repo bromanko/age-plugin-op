@@ -1,10 +1,15 @@
 package plugin
 
 import (
-	"os"
+	"fmt"
+	"os/exec"
 )
 
 func ReadKeyOp(privateKeyPath string) ([]byte, error) {
-	// TODO - replace this with load from 1Password
-	return os.ReadFile(privateKeyPath)
+	cmd := exec.Command("op", "read", privateKeyPath)
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+	}
+	return output, nil
 }

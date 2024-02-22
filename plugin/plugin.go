@@ -17,7 +17,7 @@ const (
 func CreateIdentity(privateKeyPath string) (*OpIdentity, error) {
 	_, err := ReadKeyOp(privateKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("could not read private key from 1Password: %v", err)
+		return nil, err
 	}
 
 	identity := ParseIdentity(privateKeyPath)

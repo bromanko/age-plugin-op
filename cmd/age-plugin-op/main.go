@@ -12,7 +12,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 )
 
 type PluginOptions struct {
@@ -110,8 +109,6 @@ func respondWithStanzas(w io.Writer, errors []*age.Stanza, stanzas []*age.Stanza
 }
 
 func RunRecipientV1(stdin io.Reader, stdout io.Writer) error {
-	time.Sleep(10 * time.Second) // todo remove
-
 	var recipients []*age.Stanza
 	var identities []*age.Stanza
 	var fileKeys []*age.Stanza

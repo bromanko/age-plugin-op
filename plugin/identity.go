@@ -59,10 +59,6 @@ func (i *OpIdentity) Recipient() *OpRecipient {
 	return NewRecipient(i.privateKeyPath)
 }
 
-func ParseIdentity(privateKeyPath string) *OpIdentity {
-	return NewOpIdentity(privateKeyPath)
-}
-
 func encodeIdentity(i *OpIdentity) string {
 	var b bytes.Buffer
 	for _, v := range i.serialize() {

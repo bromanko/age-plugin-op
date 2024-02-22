@@ -20,7 +20,7 @@ func CreateIdentity(privateKeyPath string) (*OpIdentity, error) {
 		return nil, err
 	}
 
-	identity := ParseIdentity(privateKeyPath)
+	identity := NewOpIdentity(privateKeyPath)
 
 	return identity, nil
 }

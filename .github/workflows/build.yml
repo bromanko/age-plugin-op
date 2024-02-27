@@ -13,15 +13,11 @@ jobs:
 
     strategy:
       matrix:
-        include:
-          - {GOOS: linux, GOARCH: amd64}
-          - {GOOS: linux, GOARCH: arm, GOARM: 6}
-          - {GOOS: linux, GOARCH: arm64}
-          - {GOOS: darwin, GOARCH: amd64 }
-          - {GOOS: darwin, GOARCH: arm64 }
+        package: [ "age-plugin-op-linux-arm64", "age-plugin-op-linux-arm32", "age-plugin-op-linux-amd64",
+                   "age-plugin-op-darwin-amd64", "age-plugin-op-darwin-arm64" ]
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install Nix
@@ -35,7 +31,27 @@ jobs:
           diagnostic-endpoint: ""
 
       - name: Build
-        run: nix build -L
+        run: nix build .#${{ matrix.package }} -L
 
-      - name: Verify build
-        run: ./result/bin/age-plugin-op --help
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.package }}
+          path: result/**/age-plugin-op*
+          if-no-files-found: error
+
+  upload:
+    name: Upload Release Binaries
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+      - name: Upload Release Artifacts
+        run: gh release upload "$GITHUB_REF_NAME" age-plugin-op-*
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}

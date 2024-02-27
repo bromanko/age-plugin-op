@@ -52,6 +52,13 @@ jobs:
     steps:
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Gather Binaries
+        run: |
+          ls -R artifacts
+          find artifacts -type f -name "age-plugin-op"
       - name: Upload Release Artifacts
         run: gh release upload "$GITHUB_REF_NAME" age-plugin-op-*
         env:

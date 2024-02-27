@@ -1,5 +1,7 @@
 name: Build and Test
 on:
+  release:
+    types: [ published ]
   push:
   pull_request:
 

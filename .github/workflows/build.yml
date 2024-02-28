@@ -57,10 +57,25 @@ jobs:
           merge-multiple: true
       - name: Gather Binaries
         run: |
-          ls -R artifacts
-          find artifacts -type f -name "age-plugin-op"
+          source_dir="artifacts"
+          dest_dir="upload"
+          mkdir -p $dest_dir
+          
+          find $source_dir -type f -name "age-plugin-op" | while read -r file; do
+            # Extract the path without the source directory and filename
+            path_no_src_file=$(echo "$file" | sed "s|$source_dir/||;s|/age-plugin-op$||")
+            # Replace slashes with dashes and underscores appropriately
+            # Also, convert to lowercase for consistency
+            formatted_name=$(echo "$path_no_src_file" | sed 's|/|_|g' | tr '[:upper:]' '[:lower:]')
+          
+            new_name="age-plugin-op-${formatted_name}"
+            mv "$file" "$dest_dir/$new_name"
+            chmod +x "$dest_dir/$new_name"
+          
+            echo "Moved and renamed $file to $dest_dir/$new_name"
+          done
       - name: Upload Release Artifacts
-        run: gh release upload "$GITHUB_REF_NAME" age-plugin-op-*
+        run: gh release upload "$GITHUB_REF_NAME" upload/age-plugin-op-*
         env:
           GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}

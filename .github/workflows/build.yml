@@ -63,12 +63,11 @@ jobs:
           
           find $source_dir -type f -name "age-plugin-op" | while read -r file; do
             # Extract the path without the source directory and filename
-            path_no_src_file=$(echo "$file" | sed "s|$source_dir/||;s|/age-plugin-op$||")
-            # Replace slashes with dashes and underscores appropriately
-            # Also, convert to lowercase for consistency
-            formatted_name=$(echo "$path_no_src_file" | sed 's|/|_|g' | tr '[:upper:]' '[:lower:]')
-          
+            last_part=$(echo "$file" | sed "s|.*/\([^/]*\)/age-plugin-op$|\1|")
+            # Convert to lowercase for consistency
+            formatted_name=$(echo "$last_part" | tr '[:upper:]' '[:lower:]')
             new_name="age-plugin-op-${formatted_name}"
+          
             mv "$file" "$dest_dir/$new_name"
             chmod +x "$dest_dir/$new_name"
           

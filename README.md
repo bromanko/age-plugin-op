@@ -1,5 +1,5 @@
-> *⚠️  This plugin is a work in progress and will likely see further changes.
-> In the meantime, feedback is welcome!*
+> *⚠️  I have been using this plugin for a while without issue.
+> However, it hasn't received much review. YMMV.*
 
 # 1Password Plugin for Age Clients
 

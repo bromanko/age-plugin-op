@@ -13,7 +13,13 @@ and [rage](https://github.com/str4d/rage). It allows you to use your 1Password S
 
 ## Installation
 
-Age plugins must be available in the `$PATH`. Right now there are no pre-built binaries, so you will need to build the plugin yourself.
+Age plugins must be available in the `$PATH`. You can download a [pre-built binary](https://github.com/bromanko/age-plugin-op/releases) or build the appropriate [system package](https://github.com/bromanko/age-plugin-op/blob/da9269c5773779fffc607191c7317e88fb20c8e5/flake.nix#L21) using nix:
+
+```sh
+# Example building the darwin-amd64 binary
+
+$ nix build age-plugin-op-darwin-amd64
+```
 
 ## Usage
 
